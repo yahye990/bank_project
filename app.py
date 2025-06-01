@@ -1,53 +1,74 @@
-# starta bank (banktjänsterna)
-from account import Account
-from bank import Bank
-from customer import Customer
-from db import Db
+import pandas as pd
+from db import init_db, SessionLocal
+from models import Transaction
+from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy import Column, Integer
 
-# this is just usage examples of how to use the various methods in the bank.
+id = Column(Integer, primary_key=True, autoincrement=True)
+
+from decimal import Decimal
+from datetime import datetime
+import csv
+
 def main():
-    # create a new bank
-    bank = Bank().create("Tres Banko", "2345") # return bank object
-    # create a new customer
-    customer = Customer().create("Bonjamin", "8001092456") # return customer object
+    init_db()
+    db = SessionLocal()
+    print("start")
 
-    # add the customer to the bank we created (and add a personal account, which every new customer gets)
-    bank.add_customer(customer)
-    personal_account = customer.accounts[0]
-    print(f"before personal dep {personal_account.get_balance()}")
-    # make a deposit
-    personal_account.deposit(200)
-    print(f"after personal dep {personal_account.get_balance()}")
-    # withdraw too much, should not change balance
-    personal_account.withdraw(300)
-    print(f"after personal overdraw attempt  {personal_account.get_balance()}")
-    # withdraw half
-    personal_account.withdraw(100)
-    print(f"after personal withdraw half {personal_account.get_balance()}")
-    # withdraw the outstanding balance (effectively zeroing the account)
-    balance = personal_account.get_balance()
-    personal_account.withdraw(balance)
-    print(f"after personal withdraw outstanding {personal_account.get_balance()}")
+    try:
+        #with db.begin():  # automatiskt commit om inget går fel
+            with open('new_transactions_data.csv') as csvfile:
+                reader = csv.DictReader(csvfile)
+                for index, row in enumerate(reader):
+                    try:
+                        transaction = Transaction(
+                            transaction=row["transaction_id"],
+                            timestamp=row["timestamp"],
+                            amount=row["amount"],
+                            currency=row["currency"],
+                            sender_account=row["sender_account"],
+                            receiver_account=row["receiver_account"],
+                            sender_country=row["sender_country"],
+                            sender_municipality=row["sender_municipality"],
+                            receiver_country=row["receiver_country"],
+                            receiver_municipality=row["receiver_municipality"],
+                            transaction_type=row["transaction_type"],
+                            notes=row["notes"]
+                        )
+                        db.add(transaction)
 
-
-    # also add a savings account
-    # nr = Account.generate_nr() # 8064047892
-    savings_account = bank.add_account(customer, "Savings_account", "8064047892")
-    print(f"before savings dep {savings_account.get_balance()}")
-    # make a deposit
-    savings_account.deposit(300)
-    print(f"after savings dep {savings_account.get_balance()}")
-    # withdraw too much, should not change balance
-    savings_account.withdraw(400)
-    print(f"after savings overdraw attempt  {savings_account.get_balance()}")
-    # withdraw a third
-    savings_account.withdraw(100)
-    print(f"after savings withdraw half {savings_account.get_balance()}")
-    # withdraw the outstanding balance (effectively zeroing the account)
-    balance = savings_account.get_balance()
-    savings_account.withdraw(balance)
-    print(f"after savings withdraw outstanding {savings_account.get_balance()}")
+                    except (ValueError, KeyError) as e:
+                        print(f"Rad {index} hoppar över p.g.a. fel: {e}")
+    except SQLAlchemyError as db_error:
+        print(f"Databasfel: {db_error}")
+    finally:
+        db.close()
+        print("klart")
 
 
-if __name__ == '__main__':
+
+    db.commit()
+
+    #
+    #except SQLAlchemyError as e:
+       # db.rollback()
+       # print("[ERROR] Något gick fel:", e)
+
+    #try:
+        #with db.begin():
+           #customer = Customer(name="Benjamin", ssn="7001092456", email="benjamin@example.com")
+            #db.add(customer)
+
+            #account = Account(number="8064047892", balance=200, customer_id=customer.id)
+            #db.add(account)
+
+    #except SQLAlchemyError as e:
+        #db.rollback()
+        #print("[ERROR] Något gick fel:", e)
+
+    #print(f"{customer.name} ({customer.email}) har saldo {account.balance}")
+
+    db.close()
+
+if __name__ == "__main__":
     main()

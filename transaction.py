@@ -14,4 +14,4 @@ class Transaction:
                 print(f"Transaction '{amount}' created successfully.")
         except:
             print(f"[Warning] Transaction blocked due to constraint violation, date or non approved customer.")
-        return amount
+        return amou

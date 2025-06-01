@@ -4,9 +4,10 @@
 # has balance
 # has currency
 import random
-
-from db import Db
 from transaction import Transaction
+
+
+
 
 
 class Account:
